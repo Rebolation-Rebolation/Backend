@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model atletica {
+  id_atletica                                    Int                        @id @default(autoincrement())
+  nome                                           String?                    @db.VarChar(255)
+  logo                                           Bytes?
+  id_instituicao                                 Int?
+  instituicao                                    instituicao?               @relation(fields: [id_instituicao], references: [id_instituicao], onDelete: NoAction, onUpdate: NoAction, map: "fk_atletica_instituicao")
+  classificacao_campeonato                       classificacao_campeonato[]
+  partida_partida_id_primeira_atleticaToatletica partida[]                  @relation("partida_id_primeira_atleticaToatletica")
+  partida_partida_id_segunda_atleticaToatletica  partida[]                  @relation("partida_id_segunda_atleticaToatletica")
+}
+
+model campeonato {
+  id_campeonato            Int                        @id @default(autoincrement())
+  logo                     Bytes?
+  nome                     String?                    @db.VarChar(255)
+  dt_criacao               DateTime?                  @db.Date
+  dt_fim                   DateTime?                  @db.Date
+  id_modalidade            Int?
+  modalidade               modalidade?                @relation(fields: [id_modalidade], references: [id_modalidade], onDelete: NoAction, onUpdate: NoAction, map: "fk_campeonato_modalidade")
+  classificacao_campeonato classificacao_campeonato[]
+  partida                  partida[]
+}
+
+model classificacao_campeonato {
+  id_classificacao     Int         @id @default(autoincrement())
+  id_campeonato        Int?
+  id_atletica          Int?
+  pontos_marcados      Int
+  pontos_classificacao Int
+  partidas_jogadas     Int
+  vitorias             Int
+  derrotas             Int
+  empates              Int
+  atletica             atletica?   @relation(fields: [id_atletica], references: [id_atletica], onDelete: NoAction, onUpdate: NoAction, map: "fk_classificacao_atletica")
+  campeonato           campeonato? @relation(fields: [id_campeonato], references: [id_campeonato], onDelete: NoAction, onUpdate: NoAction, map: "fk_classificacao_campeonato")
+}
+
+model instituicao {
+  id_instituicao Int        @id @default(autoincrement())
+  nome           String?    @db.VarChar(255)
+  logo           Bytes?
+  atletica       atletica[]
+}
+
+model modalidade {
+  id_modalidade Int          @id @default(autoincrement())
+  nome          String?      @db.VarChar(255)
+  campeonato    campeonato[]
+}
+
+model partida {
+  id_partida                                      Int         @id @default(autoincrement())
+  id_primeira_atletica                            Int?
+  id_segunda_atletica                             Int?
+  dt_ocorrencia                                   DateTime?   @db.Date
+  mvp                                             String?     @db.VarChar(255)
+  id_campeonato                                   Int?
+  id_placar                                       Int?
+  atletica_partida_id_primeira_atleticaToatletica atletica?   @relation("partida_id_primeira_atleticaToatletica", fields: [id_primeira_atletica], references: [id_atletica], onDelete: NoAction, onUpdate: NoAction, map: "fk_partida_atletica1")
+  atletica_partida_id_segunda_atleticaToatletica  atletica?   @relation("partida_id_segunda_atleticaToatletica", fields: [id_segunda_atletica], references: [id_atletica], onDelete: NoAction, onUpdate: NoAction, map: "fk_partida_atletica2")
+  campeonato                                      campeonato? @relation(fields: [id_campeonato], references: [id_campeonato], onDelete: NoAction, onUpdate: NoAction, map: "fk_partida_campeonato")
+  placar                                          placar?     @relation(fields: [id_placar], references: [id_placar], onDelete: NoAction, onUpdate: NoAction, map: "fk_partida_placar")
+}
+
+model placar {
+  id_placar            Int       @id @default(autoincrement())
+  placar_primeiro_time Int?
+  placar_segundo_time  Int?
+  tp_placar            Int?
+  partida              partida[]
+}
