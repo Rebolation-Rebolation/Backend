@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChampionshipStatus {
+  ativo
+  finalizado
+  inscricoes_abertas
+  inscricoes_encerradas
+  aguardando_inicio
+}
+
+enum DisputeType {
+  pontos_corridos
+  mata_mata
+  grupos
+  mista
+}
+
+enum EnrollmentStatus {
+  confirmado
+  pendente
+  cancelado
+}
+
+enum MatchStatus {
+  agendada
+  em_andamento
+  finalizada
+  cancelada
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  teams Team[]
+
+  @@map("users")
+}
+
+model SportCategory {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(100)
+  icon      String   @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  teams         Team[]
+  championships Championship[]
+
+  @@map("sport_categories")
+}
+
+model Team {
+  id          String    @id @default(uuid())
+  name        String    @db.VarChar(255)
+  logo        String?   @db.Text
+  description String?   @db.Text
+  categoryId  String    @map("category_id")
+  ownerId     String    @map("owner_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  owner       User      @relation(fields: [ownerId], references: [id])
+  category    SportCategory @relation(fields: [categoryId], references: [id])
+  enrollments ChampionshipEnrollment[]
+  homeMatches Match[]   @relation("HomeTeam")
+  awayMatches Match[]   @relation("AwayTeam")
+  trophies    Trophy[]
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@map("teams")
+}
+
+model Championship {
+  id                    String                @id @default(uuid())
+  name                  String                @db.VarChar(255)
+  description           String?               @db.Text
+  image                 String?               @db.Text
+  categoryId            String                @map("category_id")
+  status                ChampionshipStatus    @default(inscricoes_abertas)
+  startDate             DateTime              @map("start_date") @db.Date
+  endDate               DateTime              @map("end_date") @db.Date
+  registrationStartDate DateTime              @map("registration_start_date") @db.Date
+  registrationEndDate   DateTime              @map("registration_end_date") @db.Date
+  teamLimit             Int                   @map("team_limit")
+  rules                 String?               @db.Text
+  location              String?               @db.VarChar(255)
+  disputeType           DisputeType           @default(pontos_corridos) @map("dispute_type")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  category    SportCategory            @relation(fields: [categoryId], references: [id])
+  enrollments ChampionshipEnrollment[]
+  matches     Match[]
+  trophies    Trophy[]
+
+  @@index([categoryId])
+  @@map("championships")
+}
+
+model ChampionshipEnrollment {
+  id            String           @id @default(uuid())
+  championshipId String         @map("championship_id")
+  teamId        String          @map("team_id")
+  status        EnrollmentStatus @default(pendente)
+  enrolledAt    DateTime        @default(now()) @map("enrolled_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([championshipId, teamId])
+  @@index([championshipId])
+  @@index([teamId])
+  @@map("championship_enrollments")
+}
+
+model Match {
+  id            String      @id @default(uuid())
+  championshipId String    @map("championship_id")
+  homeTeamId    String      @map("home_team_id")
+  awayTeamId    String      @map("away_team_id")
+  type          String      @db.VarChar(100)
+  title         String      @db.VarChar(255)
+  date          DateTime    @db.Date
+  startTime     DateTime    @map("start_time") @db.Time
+  endTime       DateTime?   @map("end_time") @db.Time
+  local         String      @db.VarChar(255)
+  homeScore     Int         @default(0) @map("home_score")
+  awayScore     Int         @default(0) @map("away_score")
+  status        MatchStatus @default(agendada)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  homeTeam      Team         @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam      Team         @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+
+  @@index([championshipId])
+  @@map("matches")
+}
+
+model Trophy {
+  id            String    @id @default(uuid())
+  championshipId String  @map("championship_id")
+  teamId        String    @map("team_id")
+  position      Int
+  year          Int
+  wins          Int       @default(0)
+  losses        Int       @default(0)
+  draws         Int?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  championship Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("trophies")
+}
+
